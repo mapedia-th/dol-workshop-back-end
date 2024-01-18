@@ -1,0 +1,101 @@
+cd C:\Program Files\PostgreSQL\15\bin
+
+#ทดลองใช้คำสั่ง
+raster2pgsql
+
+raster2pgsql -I -C -F -t 256x256 -s 32647 C:\Workspace\dol_training\raster\satellite_landsat.tif > c:\workspace\dol_training\raster\satellite_landsat.sql
+
+raster2pgsql -I -C -F -t 256x256 -s 32647 C:\Workspace\dol_training\raster\DEM.tif  public.dem | psql -U postgres -d dol -h localhost -p 5434
+
+
+/// sql function///
+
+SELECT rid, ST_Height(rast) As rastheight,ST_Width(rast) As rastwidth,ST_MetaData(rast)
+FROM satellite_landsat;
+
+
+SELECT rid, (foo.md).*
+ FROM (SELECT rid, ST_MetaData(rast) As md
+FROM satellite_landsat) As foo;
+
+
+///get value from geom///
+SELECT ST_AsText(ST_PixelAsCentroid(rast, 1, 1)) FROM satellite_landsat WHERE rid = 1;
+
+
+SELECT rid, ST_Value(rast, foo.pt_geom) As b1pval, ST_Value(rast, 2, foo.pt_geom) As b2pval
+FROM satellite_landsat CROSS JOIN (SELECT ST_SetSRID(ST_Point(568140,1918860), 32647) As pt_geom) As foo
+WHERE rid=1;
+
+
+/// ST_CLIP///
+SELECT 
+    r.rid, 
+    ST_Clip(r.rast, st_transform(a.geom,32647)) AS clipped_raster
+FROM 
+    (SELECT rid, rast
+     FROM dem) AS r
+JOIN 
+    amphoe AS a
+ON 
+    ST_Intersects(r.rast, st_transform(a.geom,32647))
+WHERE 
+    a.amphoe_t = 'อ.นครไทย';
+
+
+
+
+
+-- Create a new table to store the clipped raster results
+CREATE TABLE clipped_raster_table (
+    rid serial PRIMARY KEY,
+    clipped_raster raster
+);
+
+-- Insert the result of the clipping query into the new table
+INSERT INTO clipped_raster_table (rid, clipped_raster)
+SELECT 
+    r.rid, 
+    ST_Clip(r.rast, st_transform(a.geom,32647)) AS clipped_raster
+FROM 
+    (SELECT rid, rast
+     FROM dem) AS r
+JOIN 
+    amphoe AS a
+ON 
+    ST_Intersects(r.rast, st_transform(a.geom,32647))
+WHERE 
+    a.amphoe_t = 'อ.นครไทย';
+
+
+
+
+SELECT ST_Union(rast) AS unioned_raster
+FROM (
+    SELECT rast FROM dem
+    UNION ALL
+    SELECT rast FROM satellite_landsat
+) AS combined_rasters;
+
+SELECT ST_Union(rast) AS unioned_raster
+FROM dem
+WHERE ST_Intersects(rast, (SELECT st_transform(geom,32647) FROM amphoe WHERE amphoe_t = 'อ.นครไทย'));
+
+
+
+WITH c AS (
+  SELECT (ST_Contour(rast,1, 1000)).*
+  FROM dem
+
+)
+SELECT geom AS contour_geometry, id, value
+FROM c;
+
+
+
+WITH c AS (
+SELECT (ST_Contour(rast, 1, fixed_levels => ARRAY[100.0, 200.0, 300.0])).*
+FROM dem 
+)
+SELECT geom id, value
+FROM c;
