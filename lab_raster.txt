@@ -99,3 +99,13 @@ FROM dem
 )
 SELECT geom id, value
 FROM c;
+
+
+SELECT ST_AsTIFF(rast, 'GTiff') As rasttiff
+FROM dem WHERE rid=2
+
+
+-- export the first 3 bands and map band 3 to Red, band 1 to Green, band 2 to blue
+SELECT ST_AsPNG(rast, ARRAY[5,4,3]) As rastpng
+FROM satellite_landsat WHERE rid=2;
+
