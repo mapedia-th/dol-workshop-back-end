@@ -28,6 +28,10 @@ FROM satellite_landsat CROSS JOIN (SELECT ST_SetSRID(ST_Point(568140,1918860), 3
 WHERE rid=1;
 
 
+SELECT rid, ST_Value(rast, (SELECT ST_SetSRID(ST_Point(568140,1918860), 32647) )) As b1pval, ST_Value(rast, 2, (SELECT ST_SetSRID(ST_Point(568140,1918860), 32647))) As b2pval
+FROM satellite_landsat 
+
+
 /// ST_CLIP///
 SELECT 
     r.rid, 

@@ -42,3 +42,30 @@ FROM (SELECT
 
 SELECT center_nam, ST_Buffer(geom, 0.1) AS geom_buffer ,geom 
 FROM dol_office WHERE id = 1
+
+
+
+
+
+WITH DepartmentAverage AS (
+    -- Subquery calculating average salary for each department
+    SELECT
+        department,
+        AVG(salary) AS avg_salary
+    FROM
+        employees
+    GROUP BY
+        department
+)
+-- Main query selecting employees with salary higher than their department's average
+SELECT
+    e.employee_id,
+    e.employee_name,
+    e.department,
+    e.salary
+FROM
+    employees e
+JOIN
+    DepartmentAverage da ON e.department = da.department
+WHERE
+    e.salary > da.avg_salary;
